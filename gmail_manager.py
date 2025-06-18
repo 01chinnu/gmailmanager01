@@ -1,42 +1,52 @@
 import streamlit as st
 import pandas as pd
 import re
-from ics import Calendar, Event
 from datetime import datetime
-import calendar
+from streamlit_calendar import calendar
 
 st.set_page_config(page_title="Gmail Manager AI", page_icon="📩", layout="wide")
 
 # --- Sidebar ---
 with st.sidebar:
     st.title("📂 Gmail Manager AI")
-    st.markdown("Analyze emails for deadlines, tags, and sender info!")
+    st.markdown("🔍 Analyze emails for deadlines, tags, and sender info!")
 
-    # Calendar visual as table (month grid)
+    st.markdown("### 🗓️ Visual Calendar")
     try:
-        cal_df = pd.read_csv("calendar.csv")
-        cal_df = cal_df[cal_df["Date/Deadline"] != "No deadline found"]
+        df = pd.read_csv("calendar.csv")
+        df = df[df["Date/Deadline"] != "No deadline found"]
 
-        # Month-based grid view (basic simulation)
-        st.markdown("### 🗓️ Visual Calendar")
-        today = datetime.now()
-        current_month = today.strftime('%B')
-        cal = calendar.monthcalendar(today.year, today.month)
-        cal_str = f"#### {current_month} {today.year}\n"
-        cal_str += "Mo Tu We Th Fr Sa Su\n"
-        for week in cal:
-            week_str = " ".join(f"{day:2}" if day != 0 else "  " for day in week)
-            cal_str += week_str + "\n"
-        st.code(cal_str)
+        def convert_to_date(date_str):
+            try:
+                return datetime.strptime(date_str, "%B %d").date().replace(year=datetime.now().year)
+            except:
+                return None
 
-        st.markdown("---")
-        st.markdown("### 📅 Upcoming Deadlines")
-        for _, row in cal_df.iterrows():
-            st.markdown(f"**{row['Date/Deadline']}** \n✅ {row['Tags']} — {row['From']}")
+        event_list = [
+            {
+                "title": row["Tags"],
+                "start": convert_to_date(row["Date/Deadline"]).strftime("%Y-%m-%d") if convert_to_date(row["Date/Deadline"]) else None,
+                "description": row["From"]
+            }
+            for _, row in df.iterrows() if convert_to_date(row["Date/Deadline"])
+        ]
+
+        calendar_options = {
+            "editable": False,
+            "height": 300,
+            "initialView": "dayGridMonth"
+        }
+
+        calendar(events=event_list, options=calendar_options)
+
+        st.markdown("### 📌 Upcoming Deadlines")
+        for _, row in df.iterrows():
+            st.markdown(f"**{row['Date/Deadline']}** — 🏷️ {row['Tags']}<br>📨 {row['From']}", unsafe_allow_html=True)
 
         if st.button("📅 Download Calendar (.ics)"):
+            from ics import Calendar, Event
             cal = Calendar()
-            for _, row in cal_df.iterrows():
+            for _, row in df.iterrows():
                 e = Event()
                 e.name = f"{row['Tags']} - {row['From']}"
                 try:
@@ -108,7 +118,6 @@ if st.button("🧠 Process Email"):
             except FileNotFoundError:
                 df = pd.DataFrame(columns=new_entry.keys())
 
-            # Prevent duplicates
             if not ((df["Date/Deadline"] == new_entry["Date/Deadline"]) &
                     (df["Tags"] == new_entry["Tags"]) &
                     (df["From"] == new_entry["From"])).any():
