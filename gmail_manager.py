@@ -114,4 +114,4 @@ with st.expander("📅 View Saved Calendar"):
 
 # --- Footer ---
 st.markdown("---")
-st.caption("🚀 Built with ❤️ by Lahiri • AI Inbox Assistant Demo")
+
