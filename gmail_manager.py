@@ -116,34 +116,35 @@ if st.button("🧠 Process Email"):
             st.info("📭 No deadline found, so it was not added to the calendar.")
 
 # --- DEADLINE VISUAL CALENDAR ---
-st.sidebar.markdown("### 🗓️ Visual Calendar")
-try:
-    df = pd.read_csv("calendar.csv")
-    if not df.empty:
-        df.drop_duplicates(inplace=True)
-        deadline_dates = [convert_to_date(date_str) for date_str in df["Date"] if convert_to_date(date_str)]
+with st.sidebar.expander("🗓️ View Calendar"):
+    try:
+        df = pd.read_csv("calendar.csv")
+        if not df.empty:
+            df.drop_duplicates(inplace=True)
 
-        event_list = [
-            {
-                "title": row["Tags"],
-                "start": convert_to_date(row["Date"]).strftime("%Y-%m-%d") if convert_to_date(row["Date"]) else None,
-                "description": row["From"]
+            deadline_dates = [convert_to_date(date_str) for date_str in df["Date"] if convert_to_date(date_str)]
+
+            event_list = [
+                {
+                    "title": row["Tags"],
+                    "start": convert_to_date(row["Date"]).strftime("%Y-%m-%d") if convert_to_date(row["Date"]) else None,
+                    "description": row["From"]
+                }
+                for _, row in df.iterrows() if convert_to_date(row["Date"])
+            ]
+
+            calendar_options = {
+                "editable": False,
+                "height": 300,
+                "initialView": "dayGridMonth"
             }
-            for _, row in df.iterrows() if convert_to_date(row["Date"])
-        ]
 
-        calendar_options = {
-            "editable": False,
-            "height": 300,
-            "initialView": "dayGridMonth"
-        }
+            calendar(events=event_list, options=calendar_options)
 
-        calendar(events=event_list, options=calendar_options)
-
-        st.sidebar.markdown("### 📌 Upcoming Deadlines")
-        for _, row in df.iterrows():
-            st.sidebar.markdown(f"**{row['Date']}** — 🏷️ {row['Tags']}<br>📨 {row['From']}", unsafe_allow_html=True)
-    else:
-        st.sidebar.info("📭 No calendar entries yet.")
-except FileNotFoundError:
-    st.sidebar.info("📭 No calendar entries yet.")
+            st.markdown("### 📌 Upcoming Deadlines")
+            for _, row in df.iterrows():
+                st.markdown(f"**{row['Date']}** — 🏷️ {row['Tags']}<br>📨 {row['From']}", unsafe_allow_html=True)
+        else:
+            st.info("📭 No calendar entries yet.")
+    except FileNotFoundError:
+        st.info("📭 No calendar entries yet.")
