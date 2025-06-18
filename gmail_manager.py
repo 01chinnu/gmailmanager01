@@ -35,7 +35,7 @@ st.markdown("""
 
 # --- SIDEBAR TITLE ---
 st.sidebar.title("📂 Gmail Manager AI")
-st.sidebar.markdown("🔍 Analyze emails for deadlines, tags, and sender info!")
+st.sidebar.markdown("🔍 Analyze emails for deadlines, tags, sender info, and priority!")
 
 # --- CALENDAR EXPANDER ---
 with st.sidebar.expander("📅 View Calendar", expanded=True):
@@ -46,14 +46,12 @@ with st.sidebar.expander("📅 View Calendar", expanded=True):
         if not df.empty:
             def convert_to_date(date_str):
                 try:
-                    # Check if year is included, e.g., "December 25, 2025"
                     if re.search(r'\d{4}', date_str):
                         return datetime.strptime(date_str, "%B %d, %Y").date()
                     else:
                         return datetime.strptime(date_str, "%B %d").date().replace(year=datetime.now().year)
                 except:
                     return None
-
 
             events = []
             for _, row in df.iterrows():
@@ -62,7 +60,7 @@ with st.sidebar.expander("📅 View Calendar", expanded=True):
                     events.append({
                         "title": row["Tags"],
                         "start": date_obj.strftime("%Y-%m-%d"),
-                        "description": row["From"]
+                        "description": f"{row['From']} | {row.get('Priority', '')}"
                     })
 
             calendar(events=events, options={
@@ -82,7 +80,7 @@ try:
     if not df.empty:
         for _, row in df.iterrows():
             st.sidebar.markdown(
-                f"**📌 {row['Date']}** — 🏷️ {row['Tags']}  \n📨 {row['From']}",
+                f"**📌 {row['Date']}** — 🏷️ {row['Tags']}  \n📨 {row['From']} — {row.get('Priority', '')}",
                 unsafe_allow_html=True
             )
     else:
@@ -121,6 +119,19 @@ def extract_sender(text):
     match = re.search(r"From:\s*(.*?)(<.*?>)?\\n", text)
     return match.group(1).strip() if match else "Unknown Sender"
 
+def score_priority(text):
+    score = 0
+    text_lower = text.lower()
+    if any(word in text_lower for word in ["urgent", "asap", "immediately", "important"]):
+        score += 50
+    if any(word in text_lower for word in ["submit", "deadline", "due"]):
+        score += 30
+    if "attached" in text_lower or "attachment" in text_lower:
+        score += 10
+    if any(name in text_lower for name in ["sir", "ma'am", "professor"]):
+        score += 10
+    return min(score, 100)
+
 # --- Process Email ---
 if st.button("🧠 Process Email"):
     if not email_input.strip():
@@ -129,17 +140,27 @@ if st.button("🧠 Process Email"):
         deadline = extract_date(email_input)
         tags = tag_email(email_input)
         sender = extract_sender(email_input)
+        priority_score = score_priority(email_input)
+
+        if priority_score >= 70:
+            badge = "🔴 High"
+        elif priority_score >= 40:
+            badge = "🟡 Medium"
+        else:
+            badge = "🟢 Low"
 
         st.markdown("### ✅ Analysis Result")
         st.markdown(f"**🕓 Deadline:** `{deadline}`")
         st.markdown(f"**🏷️ Tags:** `{', '.join(tags)}`")
         st.markdown(f"**📨 From:** {sender}")
+        st.markdown(f"**📊 Priority Score:** `{priority_score}` → {badge}")
 
         if deadline != "No deadline found":
             new_entry = {
                 "Date": deadline,
                 "Tags": ", ".join(tags),
-                "From": sender
+                "From": sender,
+                "Priority": badge
             }
 
             try:
