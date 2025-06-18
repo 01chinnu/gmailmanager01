@@ -59,11 +59,7 @@ def generate_reply(text):
         return "Got it. Thank you!"
 
 # --- Text Area for Email Input ---
-email_input = st.text_area(
-    "📥 Paste your email content here:",
-    placeholder="Hi Lahiri, please submit your AI project by June 21st at 5 PM...",
-    height=200
-)
+
 
 # --- Button to Process ---
 if st.button("🧠 Process Email"):
