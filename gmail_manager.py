@@ -2,17 +2,13 @@ import streamlit as st
 import pandas as pd
 import re
 
-# --- Page Configuration ---
+# --- Page Config ---
 st.set_page_config(page_title="Gmail Manager AI", page_icon="📩", layout="wide")
 
-# --- Styling ---
+# --- CSS Styling ---
 st.markdown("""
     <style>
-        .main {
-            background-color: #f7f9fc;
-            padding: 20px;
-            border-radius: 10px;
-        }
+        .main {background-color: #f7f9fc; padding: 20px; border-radius: 10px;}
         footer {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
@@ -24,17 +20,9 @@ st.sidebar.success("📅 Deadlines are saved in your calendar table.")
 
 # --- Title ---
 st.title("📬 Gmail Manager AI")
-st.subheader("Simplify your inbox — AI that organizes deadlines for you ✨")
+st.subheader("Your AI-powered email assistant ✨")
 
-# --- Tag Extraction (excluding 'Deadline') ---
-def tag_email(text):
-    tags = []
-    if "project" in text.lower(): tags.append("Project")
-    if "meeting" in text.lower(): tags.append("Meeting")
-    if "reminder" in text.lower(): tags.append("Reminder")
-    return tags or ["General"]
-
-# --- Date Extraction ---
+# --- Helper Functions ---
 def extract_date(text):
     patterns = [
         r'\b(?:\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December))\b',
@@ -46,7 +34,21 @@ def extract_date(text):
             return match.group()
     return "No deadline found"
 
-# --- Reply Generator ---
+def extract_sender(text):
+    match = re.search(r"From:\s*(.*?)(<.*?>)?", text, re.IGNORECASE)
+    if match:
+        name = match.group(1).strip()
+        email = match.group(2).strip() if match.group(2) else ""
+        return f"{name} {email}".strip()
+    return "Unknown Sender"
+
+def tag_email(text):
+    tags = []
+    if "project" in text.lower(): tags.append("Project")
+    if "meeting" in text.lower(): tags.append("Meeting")
+    if "reminder" in text.lower(): tags.append("Reminder")
+    return tags or ["General"]
+
 def generate_reply(text):
     if "submit" in text.lower():
         return "Thank you! I’ll submit it by the deadline."
@@ -55,31 +57,28 @@ def generate_reply(text):
     else:
         return "Got it. Thank you!"
 
-# --- Sender Name Input ---
-sender = st.text_input("📧 Who is the email from?", placeholder="e.g. Prof. Rao")
-
 # --- Email Input ---
-email_input = st.text_area("📥 Paste the email content below:", height=200)
+email_input = st.text_area("📥 Paste your email content here:", height=200)
 
-# --- Process Email ---
+# --- Process Button ---
 if st.button("🧠 Process Email"):
-    if not email_input.strip():
-        st.warning("⚠️ Please paste the email first.")
-    elif not sender.strip():
-        st.warning("📧 Please enter the sender name.")
+    if email_input.strip() == "":
+        st.warning("⚠️ Please paste an email first.")
     else:
         deadline = extract_date(email_input)
         tags = tag_email(email_input)
         reply = generate_reply(email_input)
+        sender = extract_sender(email_input)
 
         st.markdown("### ✅ Analysis Result")
         st.markdown(f"**🕓 Deadline:** `{deadline}`")
         st.markdown(f"**🏷️ Tags:** `{', '.join(tags)}`")
         st.markdown(f"**💬 Auto-Reply:** _{reply}_")
+        st.markdown(f"**📧 From:** `{sender}`")
 
-        # Save only if deadline exists
+        # Save if deadline exists
         if deadline != "No deadline found":
-            entry = {
+            calendar_entry = {
                 "Date/Deadline": deadline,
                 "Tags": ", ".join(tags),
                 "From": sender
@@ -88,26 +87,24 @@ if st.button("🧠 Process Email"):
             try:
                 df = pd.read_csv("calendar.csv")
             except FileNotFoundError:
-                df = pd.DataFrame(columns=["Date/Deadline", "Tags", "From"])
+                df = pd.DataFrame(columns=calendar_entry.keys())
 
-            df = pd.concat([df, pd.DataFrame([entry])], ignore_index=True)
+            df = pd.concat([df, pd.DataFrame([calendar_entry])], ignore_index=True)
             df.to_csv("calendar.csv", index=False)
             st.success("📅 Saved to calendar.")
         else:
             st.info("📭 No deadline found, so it was not added to the calendar.")
 
-# --- Calendar View ---
-# --- Calendar View ---
+# --- View Calendar ---
 st.markdown("---")
 with st.expander("📅 View Saved Calendar"):
     try:
         df = pd.read_csv("calendar.csv")
         expected_cols = {"Date/Deadline", "Tags", "From"}
-
-        if expected_cols.issubset(df.columns):
+        if expected_cols.issubset(df.columns) and not df.empty:
             df = df[["Date/Deadline", "Tags", "From"]]
             df = df.sort_values("Date/Deadline")
-            st.markdown("### 🗓️ Calendar Entries (sorted by date):")
+            st.markdown("### 🗓️ Calendar Entries")
             st.dataframe(df.style.set_properties(**{
                 'background-color': '#fffdf7',
                 'color': '#333',
@@ -115,14 +112,9 @@ with st.expander("📅 View Saved Calendar"):
                 'text-align': 'center'
             }), use_container_width=True)
         else:
-            st.info("📭 Calendar is empty or has outdated format.")
+            st.info("📭 Calendar is empty or missing required fields.")
     except FileNotFoundError:
-        st.info("📭 No calendar entries found yet.")
-
+        st.info("📭 No calendar entries yet.")
 
 # --- Footer ---
 st.markdown("---")
-st.caption("🚀 Made with ❤️ by Lahiri | Gmail Manager AI")
-
-
-
