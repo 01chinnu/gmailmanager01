@@ -1,29 +1,73 @@
 import streamlit as st
 import pandas as pd
 import re
+from ics import Calendar, Event
+from datetime import datetime
+import calendar
 
-# --- Page Config ---
 st.set_page_config(page_title="Gmail Manager AI", page_icon="📩", layout="wide")
 
 # --- Sidebar ---
-st.sidebar.title("📂 Gmail Manager AI")
-st.sidebar.markdown("🔍 Analyze emails for deadlines, tags, and sender info!")
-st.sidebar.success("📅 Deadlines are saved in your calendar table.")
+with st.sidebar:
+    st.title("📂 Gmail Manager AI")
+    st.markdown("Analyze emails for deadlines, tags, and sender info!")
 
-# --- Title ---
-st.title("📬 Gmail Manager AI")
-st.subheader("Your AI-powered email assistant ✨")
+    # Calendar visual as table (month grid)
+    try:
+        cal_df = pd.read_csv("calendar.csv")
+        cal_df = cal_df[cal_df["Date/Deadline"] != "No deadline found"]
 
-# --- Helper Functions ---
+        # Month-based grid view (basic simulation)
+        st.markdown("### 🗓️ Visual Calendar")
+        today = datetime.now()
+        current_month = today.strftime('%B')
+        cal = calendar.monthcalendar(today.year, today.month)
+        cal_str = f"#### {current_month} {today.year}\n"
+        cal_str += "Mo Tu We Th Fr Sa Su\n"
+        for week in cal:
+            week_str = " ".join(f"{day:2}" if day != 0 else "  " for day in week)
+            cal_str += week_str + "\n"
+        st.code(cal_str)
+
+        st.markdown("---")
+        st.markdown("### 📅 Upcoming Deadlines")
+        for _, row in cal_df.iterrows():
+            st.markdown(f"**{row['Date/Deadline']}** \n✅ {row['Tags']} — {row['From']}")
+
+        if st.button("📅 Download Calendar (.ics)"):
+            cal = Calendar()
+            for _, row in cal_df.iterrows():
+                e = Event()
+                e.name = f"{row['Tags']} - {row['From']}"
+                try:
+                    date_obj = datetime.strptime(row["Date/Deadline"], "%B %d")
+                    e.begin = f"{date_obj.strftime('%Y-%m-%d')}T09:00:00"
+                except:
+                    continue
+                e.duration = {"hours": 1}
+                cal.events.add(e)
+
+            with open("gmail_calendar.ics", "w") as f:
+                f.writelines(cal.serialize_iter())
+            with open("gmail_calendar.ics", "rb") as f:
+                st.download_button("📅 Click to Download .ics", f, file_name="gmail_calendar.ics")
+
+    except FileNotFoundError:
+        st.info("📅 No calendar entries yet.")
+
+# --- Main Area ---
+st.title("📨 Gmail Manager AI")
+st.subheader("Your AI-powered email assistant")
+
 def extract_date(text):
     patterns = [
-        r'\b\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\b',
-        r'\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s*\d{4})?\b'
+        r'\b\d{1,2}(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\b',
+        r'\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s*\d{4})?\b'
     ]
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)
         if match:
-            return match.group()
+            return match.group().strip()
     return "No deadline found"
 
 def tag_email(text):
@@ -35,57 +79,43 @@ def tag_email(text):
     return tags or ["General"]
 
 def extract_sender(text):
-    # Try common "From:" pattern
     match = re.search(r"from:\s*([^\n\r]+)", text, re.IGNORECASE)
-    if match:
-        return match.group(1).strip()
-    # Fallback if not found
-    return "Unknown Sender"
+    return match.group(1).strip() if match else "Unknown Sender"
 
-# --- Email Input Area ---
-email_input = st.text_area("📥 Paste your email content here:", height=200)
+email_input = st.text_area("Paste your email content below:", height=200)
 
-# --- Button ---
 if st.button("🧠 Process Email"):
-    if email_input.strip() == "":
+    if not email_input.strip():
         st.warning("⚠️ Please paste an email first.")
     else:
         deadline = extract_date(email_input)
         tags = tag_email(email_input)
         sender = extract_sender(email_input)
 
-        # Display results
         st.markdown("### ✅ Analysis Result")
-        st.markdown(f"**🕓 Deadline:** `{deadline}`")
+        st.markdown(f"**🕒 Deadline:** `{deadline}`")
         st.markdown(f"**🏷️ Tags:** `{', '.join(tags)}`")
-        st.markdown(f"**📨 From:** _{sender}_")
+        st.markdown(f"**📩 From:** _{sender}_")
 
         if deadline != "No deadline found":
-            calendar_entry = {
+            new_entry = {
                 "Date/Deadline": deadline,
                 "Tags": ", ".join(tags),
                 "From": sender
             }
-
             try:
                 df = pd.read_csv("calendar.csv")
             except FileNotFoundError:
-                df = pd.DataFrame(columns=calendar_entry.keys())
+                df = pd.DataFrame(columns=new_entry.keys())
 
-            df = pd.concat([df, pd.DataFrame([calendar_entry])], ignore_index=True)
-            df.to_csv("calendar.csv", index=False)
-            st.success("📅 Saved to calendar.")
+            # Prevent duplicates
+            if not ((df["Date/Deadline"] == new_entry["Date/Deadline"]) &
+                    (df["Tags"] == new_entry["Tags"]) &
+                    (df["From"] == new_entry["From"])).any():
+                df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
+                df.to_csv("calendar.csv", index=False)
+                st.success("📅 Saved to calendar.")
+            else:
+                st.info("ℹ️ Already exists in calendar.")
         else:
-            st.info("📭 No deadline found, so it was not added to the calendar.")
-
-# --- View Saved Calendar ---
-st.markdown("---")
-with st.expander("📅 View Saved Calendar"):
-    try:
-        df = pd.read_csv("calendar.csv")
-        if not df.empty:
-            st.dataframe(df[["Date/Deadline", "Tags", "From"]], use_container_width=True)
-        else:
-            st.info("📭 No calendar entries yet.")
-    except FileNotFoundError:
-        st.info("📭 No calendar entries yet.")
+            st.info("📅 No deadline found, so it was not added.")
