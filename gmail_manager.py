@@ -59,8 +59,10 @@ def generate_reply(text):
         return "Got it. Thank you!"
 
 # --- Text Area for Email Input ---
-
-
+email_input = st.text_area(
+    "📥 Paste your email content here:",
+    height=200
+)
 # --- Button to Process ---
 if st.button("🧠 Process Email"):
     if email_input.strip() == "":
