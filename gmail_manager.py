@@ -97,11 +97,14 @@ if st.button("🧠 Process Email"):
             st.info("📭 No deadline found, so it was not added to the calendar.")
 
 # --- Calendar View ---
+# --- Calendar View ---
 st.markdown("---")
 with st.expander("📅 View Saved Calendar"):
     try:
         df = pd.read_csv("calendar.csv")
-        if not df.empty:
+        expected_cols = {"Date/Deadline", "Tags", "From"}
+
+        if expected_cols.issubset(df.columns):
             df = df[["Date/Deadline", "Tags", "From"]]
             df = df.sort_values("Date/Deadline")
             st.markdown("### 🗓️ Calendar Entries (sorted by date):")
@@ -112,9 +115,10 @@ with st.expander("📅 View Saved Calendar"):
                 'text-align': 'center'
             }), use_container_width=True)
         else:
-            st.info("📭 Calendar is empty.")
+            st.info("📭 Calendar is empty or has outdated format.")
     except FileNotFoundError:
         st.info("📭 No calendar entries found yet.")
+
 
 # --- Footer ---
 st.markdown("---")
