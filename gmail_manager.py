@@ -46,9 +46,14 @@ with st.sidebar.expander("📅 View Calendar", expanded=True):
         if not df.empty:
             def convert_to_date(date_str):
                 try:
-                    return datetime.strptime(date_str, "%B %d").date().replace(year=datetime.now().year)
+                    # Check if year is included, e.g., "December 25, 2025"
+                    if re.search(r'\d{4}', date_str):
+                        return datetime.strptime(date_str, "%B %d, %Y").date()
+                    else:
+                        return datetime.strptime(date_str, "%B %d").date().replace(year=datetime.now().year)
                 except:
                     return None
+
 
             events = []
             for _, row in df.iterrows():
