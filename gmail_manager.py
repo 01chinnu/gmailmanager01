@@ -5,7 +5,6 @@ from datetime import datetime
 
 # -- Helper Functions --
 def extract_date(text):
-    # Simple date pattern (e.g., June 21, 2025 or 21 June)
     patterns = [
         r'\b(?:\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December))\b',
         r'\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s*\d{4})?\b'
@@ -35,7 +34,7 @@ def generate_reply(text):
 # -- Streamlit UI --
 st.title("📩 Gmail Manager AI")
 
-st.markdown("This AI assistant reads your emails and pulls out deadlines, tags, replies, and saves to calendar.")
+st.markdown("This AI assistant reads your emails and pulls out deadlines, tags, and replies.")
 
 email_input = st.text_area("📬 Paste your email here:", height=200)
 
@@ -47,13 +46,12 @@ if st.button("🧠 Process Email"):
         deadline = extract_date(email_input)
         tags = tag_email(email_input)
         reply = generate_reply(email_input)
+        summary = email_input[:80] + "..."
 
-        # Save to calendar.csv
+        # Save to calendar.csv (without auto-reply and summary)
         calendar_entry = {
             "Date/Deadline": deadline,
-            "Tags": ", ".join(tags),
-            "Auto-Reply": reply,
-            "Summary": email_input[:80] + "..."
+            "Tags": ", ".join(tags)
         }
 
         try:
@@ -64,11 +62,12 @@ if st.button("🧠 Process Email"):
         df = pd.concat([df, pd.DataFrame([calendar_entry])], ignore_index=True)
         df.to_csv("calendar.csv", index=False)
 
-        # Display Results
+        # Display Results (Auto-reply and summary separately)
         st.success("✅ Email analyzed and added to calendar.")
         st.write("**📅 Deadline:**", deadline)
         st.write("**🏷️ Tags:**", ", ".join(tags))
         st.write("**💬 Suggested Reply:**", reply)
+        st.write("**📝 Email Summary:**", summary)
 
         with st.expander("📁 View Calendar"):
             st.dataframe(df)
