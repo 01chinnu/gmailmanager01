@@ -2,10 +2,13 @@ import streamlit as st
 import pandas as pd
 import re
 from datetime import datetime
+import openai
 
-# -- Helper Functions --
+# Get OpenAI API key from secrets
+openai.api_key = st.secrets["OPENAI_API_KEY"]
+
+# --- Helper Functions ---
 def extract_date(text):
-    # Simple date pattern (e.g., June 21, 2025 or 21 June)
     patterns = [
         r'\b(?:\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December))\b',
         r'\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s*\d{4})?\b'
@@ -32,10 +35,28 @@ def generate_reply(text):
     else:
         return "Got it. Thank you!"
 
-# -- Streamlit UI --
-st.title("📩 Gmail Manager AI")
+def clean_email_text(text):
+    text = re.sub(r"On\s.+?wrote:.*", "", text, flags=re.DOTALL)
+    text = re.sub(r"--\s*\n.*", "", text)
+    return text.strip()
 
-st.markdown("This AI assistant reads your emails and pulls out deadlines, tags, replies, and saves to calendar.")
+def generate_summary(text):
+    cleaned = clean_email_text(text)
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an assistant that summarizes emails."},
+                {"role": "user", "content": f"Summarize this email in 2-3 sentences:\n\n{cleaned}"}
+            ]
+        )
+        return response['choices'][0]['message']['content'].strip()
+    except Exception as e:
+        return f"⚠️ Error while summarizing: {e}"
+
+# --- Streamlit UI ---
+st.title("📩 Gmail Manager AI")
+st.markdown("This AI assistant reads your emails, finds deadlines, tags, summaries, replies, and saves them to your calendar.")
 
 email_input = st.text_area("📬 Paste your email here:", height=200)
 
@@ -47,13 +68,13 @@ if st.button("🧠 Process Email"):
         deadline = extract_date(email_input)
         tags = tag_email(email_input)
         reply = generate_reply(email_input)
+        summary = generate_summary(email_input)
 
         # Save to calendar.csv
         calendar_entry = {
             "Date/Deadline": deadline,
             "Tags": ", ".join(tags),
-            "Auto-Reply": reply,
-            "Summary": email_input[:80] + "..."
+            "Auto-Reply": reply
         }
 
         try:
@@ -69,6 +90,8 @@ if st.button("🧠 Process Email"):
         st.write("**📅 Deadline:**", deadline)
         st.write("**🏷️ Tags:**", ", ".join(tags))
         st.write("**💬 Suggested Reply:**", reply)
+        st.write("**📋 Summary:**")
+        st.info(summary)
 
         with st.expander("📁 View Calendar"):
             st.dataframe(df)
