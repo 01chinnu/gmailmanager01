@@ -2,8 +2,4 @@ streamlit
 pandas
 ics
 streamlit-calendar
-transformers==4.39.3
-torch==2.2.0+cpu
-sentencepiece
-
---extra-index-url https://download.pytorch.org/whl/cpu
+openai
