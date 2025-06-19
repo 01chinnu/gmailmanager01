@@ -122,15 +122,19 @@ def extract_sender(text):
 def score_priority(text):
     score = 0
     text_lower = text.lower()
-    if any(word in text_lower for word in ["urgent", "asap", "immediately", "important"]):
-        score += 50
-    if any(word in text_lower for word in ["submit", "deadline", "due"]):
-        score += 30
-    if "attached" in text_lower or "attachment" in text_lower:
-        score += 10
-    if any(name in text_lower for name in ["sir", "ma'am", "professor"]):
-        score += 10
+    if any(word in text_lower for word in ["urgent", "asap", "immediately", "important"]): score += 50
+    if any(word in text_lower for word in ["submit", "deadline", "due"]): score += 30
+    if "attached" in text_lower or "attachment" in text_lower: score += 10
+    if any(name in text_lower for name in ["sir", "ma'am", "professor"]): score += 10
     return min(score, 100)
+
+def generate_reply(text):
+    if "submit" in text.lower():
+        return "Thank you! I’ll submit it by the deadline."
+    elif "meeting" in text.lower():
+        return "Noted. I’ll be there."
+    else:
+        return "Got it. Thank you!"
 
 # --- Process Email ---
 if st.button("🧠 Process Email"):
@@ -149,11 +153,16 @@ if st.button("🧠 Process Email"):
         else:
             badge = "🟢 Low"
 
+        summary = email_input[:80] + "..." if len(email_input) > 80 else email_input
+        reply = generate_reply(email_input)
+
         st.markdown("### ✅ Analysis Result")
         st.markdown(f"**🕓 Deadline:** `{deadline}`")
         st.markdown(f"**🏷️ Tags:** `{', '.join(tags)}`")
         st.markdown(f"**📨 From:** {sender}")
         st.markdown(f"**📊 Priority Score:** `{priority_score}` → {badge}")
+        st.markdown(f"**🧠 Suggested Reply:** _{reply}_")
+        st.markdown(f"**📝 Summary:** {summary}")
 
         if deadline != "No deadline found":
             new_entry = {
