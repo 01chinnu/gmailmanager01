@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import re
 from datetime import datetime
-import openai  # ✅ correct import
+from openai import OpenAI
 
-# Load OpenAI API Key from Streamlit Secrets
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+# ✅ Initialize OpenAI client
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # --- Helper Functions ---
 def extract_date(text):
@@ -43,7 +43,7 @@ def clean_email_text(text):
 def generate_summary(text):
     cleaned = clean_email_text(text)
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an assistant that summarizes emails."},
