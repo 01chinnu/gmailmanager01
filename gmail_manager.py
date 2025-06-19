@@ -5,6 +5,8 @@ from datetime import datetime
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.lsa import LsaSummarizer
+import nltk
+nltk.download('punkt')
 
 # --- Helper Functions ---
 def extract_date(text):
@@ -44,8 +46,9 @@ def generate_summary(text):
         cleaned = clean_email_text(text)
         parser = PlaintextParser.from_string(cleaned, Tokenizer("english"))
         summarizer = LsaSummarizer()
-        summary = summarizer(parser.document, 2)  # 2 sentences
-        return " ".join(str(sentence) for sentence in summary)
+        summary_sentences = summarizer(parser.document, 2)
+        summary = " ".join(str(sentence) for sentence in summary_sentences)
+        return summary if summary else "No clear summary could be generated."
     except Exception as e:
         return f"⚠️ Error while summarizing locally: {e}"
 
