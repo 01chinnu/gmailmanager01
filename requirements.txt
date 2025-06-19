@@ -3,3 +3,4 @@ pandas
 ics
 streamlit-calendar
 openai>=1.0.0
+sumy
