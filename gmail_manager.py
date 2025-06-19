@@ -145,6 +145,8 @@ if st.button("🧠 Process Email"):
         tags = tag_email(email_input)
         sender = extract_sender(email_input)
         priority_score = score_priority(email_input)
+        reply = generate_reply(email_input)
+        summary = email_input[:80] + "..." if len(email_input) > 80 else email_input
 
         if priority_score >= 70:
             badge = "🔴 High"
@@ -153,17 +155,15 @@ if st.button("🧠 Process Email"):
         else:
             badge = "🟢 Low"
 
-        summary = email_input[:80] + "..." if len(email_input) > 80 else email_input
-        reply = generate_reply(email_input)
-
         st.markdown("### ✅ Analysis Result")
         st.markdown(f"**🕓 Deadline:** `{deadline}`")
         st.markdown(f"**🏷️ Tags:** `{', '.join(tags)}`")
         st.markdown(f"**📨 From:** {sender}")
         st.markdown(f"**📊 Priority Score:** `{priority_score}` → {badge}")
-        st.markdown(f"**🧠 Suggested Reply:** _{reply}_")
+        st.markdown(f"**💬 Suggested Reply:** _{reply}_")
         st.markdown(f"**📝 Summary:** {summary}")
 
+        # Save to calendar if deadline is found
         if deadline != "No deadline found":
             new_entry = {
                 "Date": deadline,
