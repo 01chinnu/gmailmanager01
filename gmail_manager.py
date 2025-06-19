@@ -2,20 +2,16 @@ import streamlit as st
 import pandas as pd
 import re
 from datetime import datetime
-from transformers import pipeline
+import openai
 
-# Load summarizer from Hugging Face
-@st.cache_resource
-def load_summarizer():
-    return pipeline("summarization", model="t5-small")
-
-summarizer = load_summarizer()
+# Load OpenAI API Key from Streamlit Secrets
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # --- Helper Functions ---
 def extract_date(text):
     patterns = [
-        r'\b(?:\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December))\b',
-        r'\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s*\d{4})?\b'
+        r'\b\d{1,2}(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)\b',
+        r'\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s*\d{4})?\b'
     ]
     for pattern in patterns:
         match = re.search(pattern, text, re.IGNORECASE)
@@ -47,8 +43,14 @@ def clean_email_text(text):
 def generate_summary(text):
     cleaned = clean_email_text(text)
     try:
-        result = summarizer(cleaned, max_length=100, min_length=30, do_sample=False)
-        return result[0]['summary_text']
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are an assistant that summarizes emails."},
+                {"role": "user", "content": f"Summarize this email in 2-3 sentences:\n\n{cleaned}"}
+            ]
+        )
+        return response['choices'][0]['message']['content'].strip()
     except Exception as e:
         return f"⚠️ Error while summarizing: {e}"
 
@@ -62,13 +64,11 @@ if st.button("🧠 Process Email"):
     if email_input.strip() == "":
         st.warning("Please paste an email first.")
     else:
-        # Process
         deadline = extract_date(email_input)
         tags = tag_email(email_input)
         reply = generate_reply(email_input)
         summary = generate_summary(email_input)
 
-        # Save to calendar.csv (no summary column stored)
         calendar_entry = {
             "Date/Deadline": deadline,
             "Tags": ", ".join(tags),
@@ -83,7 +83,6 @@ if st.button("🧠 Process Email"):
         df = pd.concat([df, pd.DataFrame([calendar_entry])], ignore_index=True)
         df.to_csv("calendar.csv", index=False)
 
-        # Display Results
         st.success("✅ Email analyzed and added to calendar.")
         st.write("**📅 Deadline:**", deadline)
         st.write("**🏷️ Tags:**", ", ".join(tags))
