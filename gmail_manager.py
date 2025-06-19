@@ -43,7 +43,7 @@ def clean_email_text(text):
 def generate_summary(text):
     cleaned = clean_email_text(text)
     try:
-        response = client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an assistant that summarizes emails."},
