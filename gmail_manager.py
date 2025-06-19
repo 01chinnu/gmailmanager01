@@ -4,43 +4,63 @@ import re
 from datetime import datetime
 # main.py
 
-# 🔽 Add the summarize_email function here
 def summarize_email(email):
-    subject = email.get("subject", "")
-    body = email.get("body", "")
-    full_text = subject + " " + body
+    subject = email.get("subject", "").strip()
+    body = email.get("body", "").strip()
+    full_text = (subject + " " + body).lower()
 
-    # Basic summary logic
-    summary = ""
-    if "submit" in full_text.lower():
-        summary = "The sender is requesting a submission."
-    elif "meeting" in full_text.lower():
-        summary = "The sender is informing or requesting about a meeting."
-    elif "update" in full_text.lower():
-        summary = "The sender is asking for a status update."
+    # Custom logic-based summarization
+    if "internship" in full_text or "collaboration" in full_text:
+        summary = (
+            "The sender is expressing interest in collaborating or applying for an internship. "
+            "They are likely offering their skills or requesting an opportunity to contribute."
+        )
+    elif "submit" in full_text or "submission" in full_text:
+        summary = (
+            "The sender is requesting the submission of a document or report by a specific deadline."
+        )
+    elif "meeting" in full_text:
+        summary = (
+            "The sender is either scheduling, confirming, or discussing a meeting."
+        )
+    elif "update" in full_text or "status" in full_text:
+        summary = (
+            "The sender is asking for a progress update or report."
+        )
+    elif "issue" in full_text or "problem" in full_text:
+        summary = (
+            "The sender is asking if any problems were encountered or offering help in case of issues."
+        )
     else:
-        summary = "General communication from the sender."
+        summary = (
+            "The sender is communicating a general message, likely requiring acknowledgement or follow-up."
+        )
 
-    # Extract deadline
+    # Extract deadline if mentioned
     deadline_match = re.search(r'\bby (\w+day|\d{1,2}\w{2}|\d{1,2}/\d{1,2})\b', full_text, re.IGNORECASE)
     deadline = deadline_match.group(1) if deadline_match else "No deadline found"
 
-    # Tags
+    # Tags based on content
     tags = []
-    if "report" in full_text.lower():
-        tags.append("Report")
-    if "project" in full_text.lower():
-        tags.append("Project")
-    if "submission" in full_text.lower():
-        tags.append("Submission")
-    if "meeting" in full_text.lower():
-        tags.append("Meeting")
+    for keyword, tag in {
+        "project": "Project",
+        "report": "Report",
+        "meeting": "Meeting",
+        "collaboration": "Collaboration",
+        "internship": "Internship",
+        "submission": "Submission",
+        "problem": "Issue",
+    }.items():
+        if keyword in full_text:
+            tags.append(tag)
 
     # Suggested reply
-    if "submit" in full_text.lower():
-        reply = "Acknowledge the request and confirm the submission date."
-    elif "let me know" in full_text.lower():
-        reply = "Confirm and respond if there are any issues."
+    if "let me know" in full_text or "please respond" in full_text:
+        reply = "Acknowledge the message and respond with the requested info or confirmation."
+    elif "submit" in full_text:
+        reply = "Confirm the submission and deadline."
+    elif "interested" in full_text or "collaboration" in full_text:
+        reply = "Respond positively and request further details like resume or proposal."
     else:
         reply = "Got it. Thank you!"
 
@@ -50,18 +70,6 @@ def summarize_email(email):
         "🏷️ Tags": tags if tags else ["General"],
         "💬 Suggested Reply": reply
     }
-
-# 🔽 Then, wherever you process or display emails:
-if __name__ == "__main__":
-    email = {
-        "subject": "Submit Final Report",
-        "body": "Hi team, please ensure that the final report is submitted by Friday. Let me know if you face any issues. Thanks!"
-    }
-
-    result = summarize_email(email)
-    for key, value in result.items():
-        print(f"{key}: {value}")
-
 
 # -- Helper Functions --
 def extract_date(text):
