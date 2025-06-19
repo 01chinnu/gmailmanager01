@@ -3,5 +3,5 @@ pandas
 ics
 streamlit-calendar
 transformers
-torch
+torch==2.2.2
 sentencepiece
