@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 import re
 from datetime import datetime
-from openai import OpenAI
+import openai  # ✅ correct import
 
-# Initialize OpenAI client with API key from Streamlit Secrets
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# Load OpenAI API Key from Streamlit Secrets
+openai.api_key = st.secrets["OPENAI_API_KEY"]
 
 # --- Helper Functions ---
 def extract_date(text):
