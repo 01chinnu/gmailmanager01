@@ -44,7 +44,7 @@ def generate_summary(text):
     cleaned = clean_email_text(text)
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are an assistant that summarizes emails."},
                 {"role": "user", "content": f"Summarize this email in 2-3 sentences:\n\n{cleaned}"}
