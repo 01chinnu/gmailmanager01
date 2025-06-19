@@ -130,11 +130,14 @@ def score_priority(text):
 
 def generate_reply(text):
     if "submit" in text.lower():
-        return "Thank you! I’ll submit it by the deadline."
+        return "Thank you! I will submit it by the deadline."
     elif "meeting" in text.lower():
         return "Noted. I’ll be there."
     else:
         return "Got it. Thank you!"
+
+def summarize(text):
+    return text.strip()[:100] + "..." if len(text.strip()) > 100 else text.strip()
 
 # --- Process Email ---
 if st.button("🧠 Process Email"):
@@ -145,25 +148,19 @@ if st.button("🧠 Process Email"):
         tags = tag_email(email_input)
         sender = extract_sender(email_input)
         priority_score = score_priority(email_input)
-        reply = generate_reply(email_input)
-        summary = email_input[:80] + "..." if len(email_input) > 80 else email_input
+        auto_reply = generate_reply(email_input)
+        summary = summarize(email_input)
 
-        if priority_score >= 70:
-            badge = "🔴 High"
-        elif priority_score >= 40:
-            badge = "🟡 Medium"
-        else:
-            badge = "🟢 Low"
+        badge = "🔴 High" if priority_score >= 70 else "🟡 Medium" if priority_score >= 40 else "🟢 Low"
 
         st.markdown("### ✅ Analysis Result")
         st.markdown(f"**🕓 Deadline:** `{deadline}`")
         st.markdown(f"**🏷️ Tags:** `{', '.join(tags)}`")
         st.markdown(f"**📨 From:** {sender}")
         st.markdown(f"**📊 Priority Score:** `{priority_score}` → {badge}")
-        st.markdown(f"**💬 Suggested Reply:** _{reply}_")
+        st.markdown(f"**💬 Suggested Auto-Reply:** _{auto_reply}_")
         st.markdown(f"**📝 Summary:** {summary}")
 
-        # Save to calendar if deadline is found
         if deadline != "No deadline found":
             new_entry = {
                 "Date": deadline,
