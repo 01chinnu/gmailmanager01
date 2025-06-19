@@ -8,6 +8,17 @@ from sumy.summarizers.lsa import LsaSummarizer
 import nltk
 nltk.download('punkt')
 
+def generate_summary(text):
+    try:
+        cleaned = clean_email_text(text)
+        parser = PlaintextParser.from_string(cleaned, Tokenizer("english"))
+        summarizer = LsaSummarizer()
+        summary_sentences = summarizer(parser.document, 2)
+        summary = " ".join(str(sentence) for sentence in summary_sentences)
+        return summary if summary else "No clear summary could be generated."
+    except Exception as e:
+        return f"⚠️ Error while summarizing locally: {e}"
+
 # --- Helper Functions ---
 def extract_date(text):
     patterns = [
@@ -41,16 +52,6 @@ def clean_email_text(text):
     text = re.sub(r"--\\s*\\n.*", "", text)
     return text.strip()
 
-def generate_summary(text):
-    try:
-        cleaned = clean_email_text(text)
-        parser = PlaintextParser.from_string(cleaned, Tokenizer("english"))
-        summarizer = LsaSummarizer()
-        summary_sentences = summarizer(parser.document, 2)
-        summary = " ".join(str(sentence) for sentence in summary_sentences)
-        return summary if summary else "No clear summary could be generated."
-    except Exception as e:
-        return f"⚠️ Error while summarizing locally: {e}"
 
 # --- Streamlit UI ---
 st.title("\U0001F4E9 Gmail Manager AI")
