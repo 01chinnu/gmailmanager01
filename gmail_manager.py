@@ -2,10 +2,14 @@ import streamlit as st
 import pandas as pd
 import re
 from datetime import datetime
-from openai import OpenAI
+from transformers import pipeline
 
-# Initialize OpenAI client using Streamlit Secrets
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+# Load summarizer from Hugging Face
+@st.cache_resource
+def load_summarizer():
+    return pipeline("summarization", model="facebook/bart-large-cnn")
+
+summarizer = load_summarizer()
 
 # --- Helper Functions ---
 def extract_date(text):
@@ -43,14 +47,8 @@ def clean_email_text(text):
 def generate_summary(text):
     cleaned = clean_email_text(text)
     try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are an assistant that summarizes emails."},
-                {"role": "user", "content": f"Summarize this email in 2-3 sentences:\n\n{cleaned}"}
-            ]
-        )
-        return response.choices[0].message.content.strip()
+        result = summarizer(cleaned, max_length=100, min_length=30, do_sample=False)
+        return result[0]['summary_text']
     except Exception as e:
         return f"⚠️ Error while summarizing: {e}"
 
@@ -70,7 +68,7 @@ if st.button("🧠 Process Email"):
         reply = generate_reply(email_input)
         summary = generate_summary(email_input)
 
-        # Save to calendar.csv (without summary now)
+        # Save to calendar.csv (no summary column stored)
         calendar_entry = {
             "Date/Deadline": deadline,
             "Tags": ", ".join(tags),
