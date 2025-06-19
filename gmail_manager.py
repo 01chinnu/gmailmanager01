@@ -2,77 +2,10 @@ import streamlit as st
 import pandas as pd
 import re
 from datetime import datetime
-# main.py
-
-def summarize_email(email):
-    subject = email.get("subject", "").strip()
-    body = email.get("body", "").strip()
-    full_text = (subject + " " + body).lower()
-
-    # Custom logic-based summarization
-    if "internship" in full_text or "collaboration" in full_text:
-        summary = (
-            "The sender is expressing interest in collaborating or applying for an internship. "
-            "They are likely offering their skills or requesting an opportunity to contribute."
-        )
-    elif "submit" in full_text or "submission" in full_text:
-        summary = (
-            "The sender is requesting the submission of a document or report by a specific deadline."
-        )
-    elif "meeting" in full_text:
-        summary = (
-            "The sender is either scheduling, confirming, or discussing a meeting."
-        )
-    elif "update" in full_text or "status" in full_text:
-        summary = (
-            "The sender is asking for a progress update or report."
-        )
-    elif "issue" in full_text or "problem" in full_text:
-        summary = (
-            "The sender is asking if any problems were encountered or offering help in case of issues."
-        )
-    else:
-        summary = (
-            "The sender is communicating a general message, likely requiring acknowledgement or follow-up."
-        )
-
-    # Extract deadline if mentioned
-    deadline_match = re.search(r'\bby (\w+day|\d{1,2}\w{2}|\d{1,2}/\d{1,2})\b', full_text, re.IGNORECASE)
-    deadline = deadline_match.group(1) if deadline_match else "No deadline found"
-
-    # Tags based on content
-    tags = []
-    for keyword, tag in {
-        "project": "Project",
-        "report": "Report",
-        "meeting": "Meeting",
-        "collaboration": "Collaboration",
-        "internship": "Internship",
-        "submission": "Submission",
-        "problem": "Issue",
-    }.items():
-        if keyword in full_text:
-            tags.append(tag)
-
-    # Suggested reply
-    if "let me know" in full_text or "please respond" in full_text:
-        reply = "Acknowledge the message and respond with the requested info or confirmation."
-    elif "submit" in full_text:
-        reply = "Confirm the submission and deadline."
-    elif "interested" in full_text or "collaboration" in full_text:
-        reply = "Respond positively and request further details like resume or proposal."
-    else:
-        reply = "Got it. Thank you!"
-
-    return {
-        "📋 Summary": summary,
-        "📅 Deadline": deadline,
-        "🏷️ Tags": tags if tags else ["General"],
-        "💬 Suggested Reply": reply
-    }
 
 # -- Helper Functions --
 def extract_date(text):
+    # Simple date pattern (e.g., June 21, 2025 or 21 June)
     patterns = [
         r'\b(?:\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December))\b',
         r'\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s*\d{4})?\b'
@@ -102,7 +35,7 @@ def generate_reply(text):
 # -- Streamlit UI --
 st.title("📩 Gmail Manager AI")
 
-st.markdown("This AI assistant reads your emails and pulls out deadlines, tags, and replies.")
+st.markdown("This AI assistant reads your emails and pulls out deadlines, tags, replies, and saves to calendar.")
 
 email_input = st.text_area("📬 Paste your email here:", height=200)
 
@@ -114,12 +47,13 @@ if st.button("🧠 Process Email"):
         deadline = extract_date(email_input)
         tags = tag_email(email_input)
         reply = generate_reply(email_input)
-        summary = email_input[:80] + "..."
 
-        # Save to calendar.csv (without auto-reply and summary)
+        # Save to calendar.csv
         calendar_entry = {
             "Date/Deadline": deadline,
-            "Tags": ", ".join(tags)
+            "Tags": ", ".join(tags),
+            "Auto-Reply": reply,
+            "Summary": email_input[:80] + "..."
         }
 
         try:
@@ -130,12 +64,11 @@ if st.button("🧠 Process Email"):
         df = pd.concat([df, pd.DataFrame([calendar_entry])], ignore_index=True)
         df.to_csv("calendar.csv", index=False)
 
-        # Display Results (Auto-reply and summary separately)
+        # Display Results
         st.success("✅ Email analyzed and added to calendar.")
         st.write("**📅 Deadline:**", deadline)
         st.write("**🏷️ Tags:**", ", ".join(tags))
         st.write("**💬 Suggested Reply:**", reply)
-        st.write("**📝 Email Summary:**", summary)
 
         with st.expander("📁 View Calendar"):
             st.dataframe(df)
